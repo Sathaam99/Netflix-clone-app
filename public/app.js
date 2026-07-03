@@ -1,3 +1,11 @@
+// --- GLOBAL ERROR TRACKING FOR EASY DEBUGGING ---
+window.onerror = function(message, source, lineno, colno, error) {
+    const errorDetails = `JavaScript Error: ${message}\nSource: ${source}\nLine: ${lineno}:${colno}\nStack: ${error ? error.stack : 'N/A'}`;
+    console.error(errorDetails);
+    alert("Netflix Clone Debug Info:\n" + errorDetails);
+    return false;
+};
+
 // --- STATE MANAGEMENT ---
 let currentUser = null;
 let seriesMetadata = null;
@@ -12,99 +20,219 @@ let durationOffset = 0; // Cumulative offset in seconds for transcoded stream se
 const EPISODE_DURATION = 2580; // Hardcoded standard episode duration (43 minutes) in seconds
 let controlsTimeout = null;
 
-// DOM Elements
-const loginContainer = document.getElementById('login-container');
-const appContainer = document.getElementById('app-container');
-const playerContainer = document.getElementById('player-container');
-const loginForm = document.getElementById('login-form');
-const usernameInput = document.getElementById('username');
-const passwordInput = document.getElementById('password');
-const mainHeader = document.getElementById('main-header');
-const logoutBtn = document.getElementById('logout-btn');
-const playHeroBtn = document.getElementById('play-hero-btn');
-const moreInfoBtn = document.getElementById('more-info-btn');
-const seasonTabsContainer = document.getElementById('season-tabs-container');
-const seasonDescText = document.getElementById('season-desc-text');
-const episodesGridContainer = document.getElementById('episodes-grid-container');
+// DOM Elements (assigned on DOMContentLoaded)
+let loginContainer, appContainer, playerContainer;
+let loginForm, usernameInput, passwordInput;
+let mainHeader, logoutBtn, playHeroBtn, moreInfoBtn;
+let seasonTabsContainer, seasonDescText, episodesGridContainer;
 
 // Player DOM Elements
-const video = document.getElementById('video-element');
-const playerControlsOverlay = document.querySelector('.player-controls-overlay');
-const playerBackBtn = document.getElementById('player-back-btn');
-const playerShowTitle = document.getElementById('player-show-title');
-const playerEpisodeTitle = document.getElementById('player-episode-title');
-const streamModeSelect = document.getElementById('stream-mode-select');
-const playerCenterPlay = document.getElementById('player-center-play');
-const centerPlayIcon = document.getElementById('center-play-icon');
-const playPauseBtn = document.getElementById('play-pause-btn');
-const playIcon = playPauseBtn.querySelector('.play-icon');
-const pauseIcon = playPauseBtn.querySelector('.pause-icon');
-const rewindBtn = document.getElementById('rewind-btn');
-const forwardBtn = document.getElementById('forward-btn');
-const volumeMuteBtn = document.getElementById('volume-mute-btn');
-const volumeUpIcon = volumeMuteBtn.querySelector('.volume-up-icon');
-const volumeMutedIcon = volumeMuteBtn.querySelector('.volume-muted-icon');
-const volumeSlider = document.getElementById('volume-slider');
-const currentTimeText = document.getElementById('current-time-text');
-const totalTimeText = document.getElementById('total-time-text');
-const nextEpBtn = document.getElementById('next-ep-btn');
-const fullscreenBtn = document.getElementById('fullscreen-btn');
-const fullscreenEnterIcon = fullscreenBtn.querySelector('.fullscreen-enter-icon');
-const fullscreenExitIcon = fullscreenBtn.querySelector('.fullscreen-exit-icon');
-const playerLoadingSpinner = document.getElementById('player-loading-spinner');
+let video, playerControlsOverlay, playerBackBtn, playerShowTitle, playerEpisodeTitle;
+let streamModeSelect, playerCenterPlay, centerPlayIcon, playPauseBtn, playIcon, pauseIcon;
+let rewindBtn, forwardBtn, volumeMuteBtn, volumeUpIcon, volumeMutedIcon, volumeSlider;
+let currentTimeText, totalTimeText, nextEpBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon;
+let playerLoadingSpinner;
 
 // Seeker DOM Elements
-const progressContainer = document.querySelector('.progress-container');
-const progressBarBg = document.getElementById('progress-bar-bg');
-const progressBarBuffered = document.getElementById('progress-bar-buffered');
-const progressBarFill = document.getElementById('progress-bar-fill');
-const progressHandle = document.getElementById('progress-handle');
-const progressTimeTooltip = document.getElementById('progress-time-tooltip');
+let progressContainer, progressBarBg, progressBarBuffered, progressBarFill, progressHandle, progressTimeTooltip;
+
+// Initialize elements and event listeners when DOM is loaded
+window.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM Content Loaded, initializing elements...');
+    
+    // Core containers
+    loginContainer = document.getElementById('login-container');
+    appContainer = document.getElementById('app-container');
+    playerContainer = document.getElementById('player-container');
+    
+    // Login form
+    loginForm = document.getElementById('login-form');
+    usernameInput = document.getElementById('username');
+    passwordInput = document.getElementById('password');
+    
+    // UI controls
+    mainHeader = document.getElementById('main-header');
+    logoutBtn = document.getElementById('logout-btn');
+    playHeroBtn = document.getElementById('play-hero-btn');
+    moreInfoBtn = document.getElementById('more-info-btn');
+    seasonTabsContainer = document.getElementById('season-tabs-container');
+    seasonDescText = document.getElementById('season-desc-text');
+    episodesGridContainer = document.getElementById('episodes-grid-container');
+    
+    // Video player
+    video = document.getElementById('video-element');
+    playerControlsOverlay = document.querySelector('.player-controls-overlay');
+    playerBackBtn = document.getElementById('player-back-btn');
+    playerShowTitle = document.getElementById('player-show-title');
+    playerEpisodeTitle = document.getElementById('player-episode-title');
+    streamModeSelect = document.getElementById('stream-mode-select');
+    playerCenterPlay = document.getElementById('player-center-play');
+    centerPlayIcon = document.getElementById('center-play-icon');
+    playPauseBtn = document.getElementById('play-pause-btn');
+    playIcon = playPauseBtn.querySelector('.play-icon');
+    pauseIcon = playPauseBtn.querySelector('.pause-icon');
+    
+    rewindBtn = document.getElementById('rewind-btn');
+    forwardBtn = document.getElementById('forward-btn');
+    volumeMuteBtn = document.getElementById('volume-mute-btn');
+    volumeUpIcon = volumeMuteBtn.querySelector('.volume-up-icon');
+    volumeMutedIcon = volumeMuteBtn.querySelector('.volume-muted-icon');
+    volumeSlider = document.getElementById('volume-slider');
+    
+    currentTimeText = document.getElementById('current-time-text');
+    totalTimeText = document.getElementById('total-time-text');
+    nextEpBtn = document.getElementById('next-ep-btn');
+    fullscreenBtn = document.getElementById('fullscreen-btn');
+    fullscreenEnterIcon = fullscreenBtn.querySelector('.fullscreen-enter-icon');
+    fullscreenExitIcon = fullscreenBtn.querySelector('.fullscreen-exit-icon');
+    playerLoadingSpinner = document.getElementById('player-loading-spinner');
+    
+    // Seeker timeline
+    progressContainer = document.querySelector('.progress-container');
+    progressBarBg = document.getElementById('progress-bar-bg');
+    progressBarBuffered = document.getElementById('progress-bar-buffered');
+    progressBarFill = document.getElementById('progress-bar-fill');
+    progressHandle = document.getElementById('progress-handle');
+    progressTimeTooltip = document.getElementById('progress-time-tooltip');
+
+    // Register all event listeners
+    registerEventListeners();
+    
+    // Check authentication
+    checkAuthStatus();
+});
+
+// Register Event Listeners
+function registerEventListeners() {
+    // Form Submit
+    loginForm.addEventListener('submit', handleLogin);
+    
+    // Logout Button
+    logoutBtn.addEventListener('click', handleLogout);
+    
+    // Header navigation links smooth scroll
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            navLinks.forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+            const target = link.getAttribute('data-target');
+            if (target === 'home') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else if (target === 'seasons') {
+                document.getElementById('seasons-section').scrollIntoView({ behavior: 'smooth' });
+            } else if (target === 'about') {
+                document.querySelector('.main-footer').scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    });
+
+    // Hero buttons
+    moreInfoBtn.addEventListener('click', () => {
+        document.getElementById('seasons-section').scrollIntoView({ behavior: 'smooth' });
+    });
+    
+    playHeroBtn.addEventListener('click', () => {
+        if (episodeCatalog && episodeCatalog[1] && episodeCatalog[1].length > 0) {
+            startVideo(1, 1);
+        }
+    });
+
+    // Player Buttons
+    playPauseBtn.addEventListener('click', togglePlay);
+    playerCenterPlay.addEventListener('click', togglePlay);
+    playerBackBtn.addEventListener('click', stopVideo);
+    nextEpBtn.addEventListener('click', playNextEpisode);
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+    // Seeker timeline clicks/drags
+    progressContainer.addEventListener('click', handleSeekClick);
+    progressContainer.addEventListener('mousemove', handleSeekTooltip);
+    progressContainer.addEventListener('mouseleave', hideSeekTooltip);
+
+    // Skip / Rewind Buttons
+    rewindBtn.addEventListener('click', () => seekRelative(-10));
+    forwardBtn.addEventListener('click', () => seekRelative(10));
+
+    // Volume controllers
+    volumeMuteBtn.addEventListener('click', toggleMute);
+    volumeSlider.addEventListener('input', handleVolumeSlider);
+
+    // Stream playback mode switch
+    streamModeSelect.addEventListener('change', (e) => {
+        streamMode = e.target.value;
+        const currentPlayTime = durationOffset + video.currentTime;
+        const startSeek = streamMode === 'transcode' ? currentPlayTime : 0;
+        configureVideoSrc(startSeek);
+    });
+
+    // Video native triggers
+    video.addEventListener('play', onVideoPlay);
+    video.addEventListener('pause', onVideoPause);
+    video.addEventListener('timeupdate', onVideoTimeUpdate);
+    video.addEventListener('ended', onVideoEnded);
+
+    // Header background change on scroll
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 30) {
+            mainHeader.classList.add('scrolled');
+        } else {
+            mainHeader.classList.remove('scrolled');
+        }
+    });
+
+    // Keyboard controls in player
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+
+    // Auto-hide controls overlay
+    playerContainer.addEventListener('mousemove', resetControlsTimer);
+}
 
 // --- AUTHENTICATION FLOW ---
 
-// Check Auth Status on Load
 async function checkAuthStatus() {
     try {
+        console.log('Checking auth status...');
         const res = await fetch('/api/auth/status');
         const data = await res.json();
         if (data.authenticated) {
             currentUser = data.username;
+            console.log('Session active for user:', currentUser);
             showAppView();
         } else {
+            console.log('No active session. Showing login.');
             showLoginView();
         }
     } catch (err) {
-        console.error('Auth check failed:', err);
+        console.error('Auth status check failed:', err);
         showLoginView();
     }
 }
 
-// Show Login Page
 function showLoginView() {
     loginContainer.classList.add('active');
     appContainer.classList.remove('active');
     playerContainer.classList.remove('active');
-    video.pause();
+    if (video) video.pause();
 }
 
-// Show App View
 function showAppView() {
     loginContainer.classList.remove('active');
     appContainer.classList.add('active');
     playerContainer.classList.remove('active');
-    video.pause();
-    document.getElementById('user-display').textContent = currentUser;
+    if (video) video.pause();
+    document.getElementById('user-display').textContent = currentUser || 'sathaam';
     loadCatalog();
 }
 
-// Login Handler
-loginForm.addEventListener('submit', async (e) => {
+async function handleLogin(e) {
     e.preventDefault();
     const username = usernameInput.value.trim();
     const password = passwordInput.value.trim();
 
     try {
+        console.log('Attempting login...');
         const res = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -113,41 +241,51 @@ loginForm.addEventListener('submit', async (e) => {
         const data = await res.json();
         if (data.success) {
             currentUser = data.username;
+            console.log('Login successful for user:', currentUser);
             showAppView();
-            // Clear inputs
             usernameInput.value = '';
             passwordInput.value = '';
         } else {
-            alert(data.message || 'Login failed. Please try again.');
+            alert(data.message || 'Login failed. Please check credentials.');
         }
     } catch (err) {
         console.error('Error during login:', err);
-        alert('An error occurred during login. Is the server running?');
+        alert('Could not contact authentication server. Verify server is running.');
     }
-});
+}
 
-// Logout Handler
-logoutBtn.addEventListener('click', async (e) => {
+async function handleLogout(e) {
     e.preventDefault();
     try {
+        console.log('Logging out...');
         await fetch('/api/logout', { method: 'POST' });
         currentUser = null;
         showLoginView();
     } catch (err) {
         console.error('Logout failed:', err);
     }
-});
+}
 
 // --- CATALOG LOAD & RENDER ---
 
 async function loadCatalog() {
     try {
+        console.log('Fetching media catalog...');
         const res = await fetch('/api/catalog');
+        if (!res.ok) {
+            if (res.status === 401) {
+                console.warn('Unauthorized catalog load request. Redirecting to login.');
+                showLoginView();
+                return;
+            }
+            throw new Error(`Failed to load catalog. Status: ${res.status}`);
+        }
+        
         const data = await res.json();
-        seriesMetadata = data.series;
-        episodeCatalog = data.catalog;
+        seriesMetadata = data.series || {};
+        episodeCatalog = data.catalog || {};
 
-        // Configure Play Hero S1:E1 button status
+        // Configure Play Hero S1:E1 button
         if (episodeCatalog && episodeCatalog[1] && episodeCatalog[1].length > 0) {
             playHeroBtn.disabled = false;
         } else {
@@ -159,19 +297,32 @@ async function loadCatalog() {
         selectSeason(activeSeason);
     } catch (err) {
         console.error('Failed to load video catalog:', err);
-        episodesGridContainer.innerHTML = `<div class="empty-state">Failed to load video catalog. Please ensure the docker container volume is correctly mapped.</div>`;
+        episodesGridContainer.innerHTML = `
+            <div class="empty-state">
+                <p>Failed to load video catalog.</p>
+                <small style="color: #666; margin-top: 10px; display: block;">Error: ${err.message}</small>
+                <button class="btn btn-primary" style="margin-top: 15px;" onclick="loadCatalog()">Retry</button>
+            </div>`;
     }
 }
 
-// Render tabs for scanned seasons
 function renderSeasonTabs() {
     seasonTabsContainer.innerHTML = '';
+    
+    if (!episodeCatalog) {
+        episodeCatalog = {};
+    }
+
     const seasons = Object.keys(episodeCatalog).map(s => parseInt(s, 10)).sort((a,b) => a - b);
     
     if (seasons.length === 0) {
-        seasonTabsContainer.innerHTML = '<span style="color: #666;">No seasons found inside /videos directory</span>';
-        seasonDescText.textContent = 'Please make sure you have files like "LOST Season 1/LOST S01-E01...mkv" under the mapped volume.';
-        episodesGridContainer.innerHTML = '<div class="empty-state">No episodes discovered. Verify path: /Users/sathaam/Downloads/LOST Series</div>';
+        seasonTabsContainer.innerHTML = '<span style="color: #8c8c8c;">No seasons found in /videos</span>';
+        seasonDescText.textContent = 'Ensure files are mapped to /videos in the container.';
+        episodesGridContainer.innerHTML = `
+            <div class="empty-state">
+                <p>No episodes discovered.</p>
+                <small style="color: #737373;">Path inside container: /videos</small>
+            </div>`;
         return;
     }
 
@@ -184,11 +335,9 @@ function renderSeasonTabs() {
     });
 }
 
-// Season Selector
 function selectSeason(seasonNum) {
     activeSeason = seasonNum;
     
-    // Update active tab styling
     const tabs = seasonTabsContainer.querySelectorAll('.season-tab');
     tabs.forEach(tab => {
         if (tab.textContent === `Season ${seasonNum}`) {
@@ -198,24 +347,21 @@ function selectSeason(seasonNum) {
         }
     });
 
-    // Update description
     if (seriesMetadata && seriesMetadata.seasonsInfo && seriesMetadata.seasonsInfo[seasonNum]) {
         seasonDescText.textContent = seriesMetadata.seasonsInfo[seasonNum];
     } else {
-        seasonDescText.textContent = `Season ${seasonNum} episodes of LOST. Stranded survivors confront the secrets of the island.`;
+        seasonDescText.textContent = `Season ${seasonNum} of LOST. stranded survivors continue to investigate the mysteries of the island.`;
     }
 
-    // Render episodes
     renderEpisodes(seasonNum);
 }
 
-// Render Episode Cards
 function renderEpisodes(seasonNum) {
     episodesGridContainer.innerHTML = '';
     const episodes = episodeCatalog[seasonNum] || [];
 
     if (episodes.length === 0) {
-        episodesGridContainer.innerHTML = `<div class="empty-state">No episodes discovered in Season ${seasonNum} directory.</div>`;
+        episodesGridContainer.innerHTML = `<div class="empty-state">No episodes discovered in Season ${seasonNum} folder.</div>`;
         return;
     }
 
@@ -245,37 +391,13 @@ function renderEpisodes(seasonNum) {
     });
 }
 
-// Header translucency on scroll
-window.addEventListener('scroll', () => {
-    if (window.scrollY > 30) {
-        mainHeader.classList.add('scrolled');
-    } else {
-        mainHeader.classList.remove('scrolled');
-    }
-});
+// --- VIDEO PLAYER ACTIONS ---
 
-// Scroll to season selector on More Info click
-moreInfoBtn.addEventListener('click', () => {
-    document.getElementById('seasons-section').scrollIntoView({ behavior: 'smooth' });
-});
-
-// Hero S1:E1 Play Click
-playHeroBtn.addEventListener('click', () => {
-    if (episodeCatalog && episodeCatalog[1] && episodeCatalog[1].length > 0) {
-        startVideo(1, 1);
-    }
-});
-
-
-// --- CUSTOM NETFLIX MEDIA PLAYER ---
-
-// Start Playing Video
 function startVideo(season, episode) {
     currentSeason = season;
     currentEpisode = episode;
     durationOffset = 0;
 
-    // Get current episode title
     const seasonList = episodeCatalog[season] || [];
     const epObj = seasonList.find(e => e.episodeNumber === episode);
     const title = epObj ? epObj.title : `Episode ${episode}`;
@@ -283,21 +405,14 @@ function startVideo(season, episode) {
     playerShowTitle.textContent = `LOST - Season ${season}`;
     playerEpisodeTitle.textContent = `Episode ${episode}: ${title}`;
 
-    // Update view
     appContainer.classList.remove('active');
     playerContainer.classList.add('active');
 
-    // Configure Video Source
     configureVideoSrc(0);
-
-    // Reset seeker bar
     updateProgressBar(0);
-
-    // Reset controls visibility
     resetControlsTimer();
 }
 
-// Stop Video & Return
 function stopVideo() {
     video.pause();
     video.src = '';
@@ -305,12 +420,10 @@ function stopVideo() {
     appContainer.classList.add('active');
 }
 
-// Play & Stream config
 function configureVideoSrc(startSecs) {
     showSpinner(true);
     durationOffset = startSecs;
     
-    // Choose streaming endpoint based on Playback Mode
     let url = '';
     if (streamMode === 'transcode') {
         url = `/api/stream/transcode/${currentSeason}/${currentEpisode}?start=${startSecs}`;
@@ -322,25 +435,13 @@ function configureVideoSrc(startSecs) {
     video.load();
     
     video.play().then(() => {
-        // Successful play
         showSpinner(false);
     }).catch(err => {
-        console.error('Play request failed:', err);
+        console.error('Video play start failed:', err);
         showSpinner(false);
     });
 }
 
-// Switch stream mode
-streamModeSelect.addEventListener('change', (e) => {
-    streamMode = e.target.value;
-    const currentPlayTime = durationOffset + video.currentTime;
-    
-    // Direct streaming doesn't support startSecs offset natively, it will restart from 0 unless range seek works.
-    const startSeek = streamMode === 'transcode' ? currentPlayTime : 0;
-    configureVideoSrc(startSeek);
-});
-
-// Play/Pause toggler
 function togglePlay() {
     if (video.paused) {
         video.play();
@@ -349,27 +450,21 @@ function togglePlay() {
     }
 }
 
-// Update UI buttons on status changes
-video.addEventListener('play', () => {
+function onVideoPlay() {
     playIcon.classList.add('hidden');
     pauseIcon.classList.remove('hidden');
     centerPlayIcon.innerHTML = '<path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
     resetControlsTimer();
-});
+}
 
-video.addEventListener('pause', () => {
+function onVideoPause() {
     playIcon.classList.remove('hidden');
     pauseIcon.classList.add('hidden');
     centerPlayIcon.innerHTML = '<path fill="currentColor" d="M8 5v14l11-7z"/>';
-    // Keep controls visible on pause
     showControls();
     if (controlsTimeout) clearTimeout(controlsTimeout);
-});
+}
 
-playPauseBtn.addEventListener('click', togglePlay);
-playerCenterPlay.addEventListener('click', togglePlay);
-
-// Seeker interaction
 function seekTo(seconds) {
     if (seconds < 0) seconds = 0;
     if (seconds > EPISODE_DURATION) seconds = EPISODE_DURATION;
@@ -377,12 +472,77 @@ function seekTo(seconds) {
     if (streamMode === 'transcode') {
         configureVideoSrc(seconds);
     } else {
-        // Direct stream native seek
         video.currentTime = seconds;
     }
 }
 
-// Time formatting helper (e.g. 2580 -> 43:00)
+function seekRelative(deltaSeconds) {
+    const currentPlayTime = durationOffset + video.currentTime;
+    seekTo(currentPlayTime + deltaSeconds);
+}
+
+function onVideoTimeUpdate() {
+    const currentPlayTime = durationOffset + video.currentTime;
+    
+    currentTimeText.textContent = formatTime(currentPlayTime);
+    totalTimeText.textContent = formatTime(EPISODE_DURATION);
+
+    const percentage = Math.min((currentPlayTime / EPISODE_DURATION) * 100, 100);
+    updateProgressBar(percentage);
+
+    if (currentPlayTime >= EPISODE_DURATION) {
+        playNextEpisode();
+    }
+}
+
+function onVideoEnded() {
+    playNextEpisode();
+}
+
+function playNextEpisode() {
+    const seasonList = episodeCatalog[currentSeason] || [];
+    const nextEp = seasonList.find(e => e.episodeNumber === currentEpisode + 1);
+
+    if (nextEp) {
+        startVideo(currentSeason, currentEpisode + 1);
+    } else if (episodeCatalog[currentSeason + 1] && episodeCatalog[currentSeason + 1].length > 0) {
+        startVideo(currentSeason + 1, 1);
+    } else {
+        stopVideo();
+        alert('Congratulations! You finished the entire scanned catalog of LOST!');
+    }
+}
+
+function updateProgressBar(percentage) {
+    progressBarFill.style.width = `${percentage}%`;
+    progressHandle.style.left = `${percentage}%`;
+}
+
+function handleSeekClick(e) {
+    const rect = progressBarBg.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const percentage = Math.max(0, Math.min(clickX / width, 1));
+    const seekTime = percentage * EPISODE_DURATION;
+    seekTo(seekTime);
+}
+
+function handleSeekTooltip(e) {
+    const rect = progressBarBg.getBoundingClientRect();
+    const hoverX = e.clientX - rect.left;
+    const width = rect.width;
+    const percentage = Math.max(0, Math.min(hoverX / width, 1));
+    const hoverTime = percentage * EPISODE_DURATION;
+
+    progressTimeTooltip.style.left = `${e.clientX - rect.left}px`;
+    progressTimeTooltip.style.display = 'block';
+    progressTimeTooltip.textContent = formatTime(hoverTime);
+}
+
+function hideSeekTooltip() {
+    progressTimeTooltip.style.display = 'none';
+}
+
 function formatTime(seconds) {
     const s = Math.floor(seconds % 60);
     const m = Math.floor((seconds / 60) % 60);
@@ -397,95 +557,7 @@ function formatTime(seconds) {
     return `${mStr}:${sStr}`;
 }
 
-// Listen to time updates to refresh timeline bar
-video.addEventListener('timeupdate', () => {
-    const currentPlayTime = durationOffset + video.currentTime;
-    
-    // Display current playback time
-    currentTimeText.textContent = formatTime(currentPlayTime);
-    totalTimeText.textContent = formatTime(EPISODE_DURATION);
-
-    // Update slider bar
-    const percentage = Math.min((currentPlayTime / EPISODE_DURATION) * 100, 100);
-    updateProgressBar(percentage);
-
-    // Check if video ended (auto-advance)
-    if (currentPlayTime >= EPISODE_DURATION) {
-        playNextEpisode();
-    }
-});
-
-// Native ended handler
-video.addEventListener('ended', () => {
-    playNextEpisode();
-});
-
-// Next Episode Trigger
-function playNextEpisode() {
-    const seasonList = episodeCatalog[currentSeason] || [];
-    const nextEp = seasonList.find(e => e.episodeNumber === currentEpisode + 1);
-
-    if (nextEp) {
-        // Next episode exists in current season
-        startVideo(currentSeason, currentEpisode + 1);
-    } else if (episodeCatalog[currentSeason + 1] && episodeCatalog[currentSeason + 1].length > 0) {
-        // Move to next season
-        startVideo(currentSeason + 1, 1);
-    } else {
-        // Reached end of entire library
-        stopVideo();
-        alert('You have reached the end of the LOST series!');
-    }
-}
-
-nextEpBtn.addEventListener('click', playNextEpisode);
-
-// Update timeline graphics
-function updateProgressBar(percentage) {
-    progressBarFill.style.width = `${percentage}%`;
-    progressHandle.style.left = `${percentage}%`;
-}
-
-// Seeker dragging & clicking
-progressContainer.addEventListener('click', (e) => {
-    const rect = progressBarBg.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const width = rect.width;
-    const percentage = Math.max(0, Math.min(clickX / width, 1));
-    const seekTime = percentage * EPISODE_DURATION;
-    seekTo(seekTime);
-});
-
-// Hover tooltip timeline
-progressContainer.addEventListener('mousemove', (e) => {
-    const rect = progressBarBg.getBoundingClientRect();
-    const hoverX = e.clientX - rect.left;
-    const width = rect.width;
-    const percentage = Math.max(0, Math.min(hoverX / width, 1));
-    const hoverTime = percentage * EPISODE_DURATION;
-
-    progressTimeTooltip.style.left = `${e.clientX - rect.left}px`;
-    progressTimeTooltip.style.display = 'block';
-    progressTimeTooltip.textContent = formatTime(hoverTime);
-});
-
-progressContainer.addEventListener('mouseleave', () => {
-    progressTimeTooltip.style.display = 'none';
-});
-
-// Rewind / Fast Forward Buttons
-rewindBtn.addEventListener('click', () => {
-    const currentPlayTime = durationOffset + video.currentTime;
-    seekTo(currentPlayTime - 10);
-});
-
-forwardBtn.addEventListener('click', () => {
-    const currentPlayTime = durationOffset + video.currentTime;
-    seekTo(currentPlayTime + 10);
-});
-
-// Mute & Volume logic
-volumeMuteBtn.addEventListener('click', () => {
+function toggleMute() {
     video.muted = !video.muted;
     if (video.muted) {
         volumeUpIcon.classList.add('hidden');
@@ -496,9 +568,9 @@ volumeMuteBtn.addEventListener('click', () => {
         volumeMutedIcon.classList.add('hidden');
         volumeSlider.value = video.volume;
     }
-});
+}
 
-volumeSlider.addEventListener('input', (e) => {
+function handleVolumeSlider(e) {
     const val = parseFloat(e.target.value);
     video.volume = val;
     if (val === 0) {
@@ -510,13 +582,12 @@ volumeSlider.addEventListener('input', (e) => {
         volumeUpIcon.classList.remove('hidden');
         volumeMutedIcon.classList.add('hidden');
     }
-});
+}
 
-// Fullscreen logic
 function toggleFullscreen() {
     if (!document.fullscreenElement) {
         playerContainer.requestFullscreen().catch(err => {
-            console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+            console.error(`Error attempting to enable fullscreen mode: ${err.message}`);
         });
     } else {
         document.exitFullscreen();
@@ -533,31 +604,22 @@ document.addEventListener('fullscreenchange', () => {
     }
 });
 
-fullscreenBtn.addEventListener('click', toggleFullscreen);
-playerBackBtn.addEventListener('click', stopVideo);
-
-// --- KEYBINDING CONTROLS ---
-document.addEventListener('keydown', (e) => {
-    // Only capture keys if player is active
+function handleKeyboardShortcuts(e) {
     if (!playerContainer.classList.contains('active')) return;
 
     if (e.key === ' ' || e.key === 'Spacebar') {
         e.preventDefault();
         togglePlay();
     } else if (e.key === 'ArrowLeft') {
-        const currentPlayTime = durationOffset + video.currentTime;
-        seekTo(currentPlayTime - 10);
+        seekRelative(-10);
     } else if (e.key === 'ArrowRight') {
-        const currentPlayTime = durationOffset + video.currentTime;
-        seekTo(currentPlayTime + 10);
+        seekRelative(10);
     } else if (e.key === 'f' || e.key === 'F') {
         toggleFullscreen();
     } else if (e.key === 'Escape') {
         stopVideo();
     }
-});
-
-// --- HOVER CONTROL VISIBILITY ---
+}
 
 function showControls() {
     playerControlsOverlay.classList.remove('inactive');
@@ -575,9 +637,6 @@ function resetControlsTimer() {
     controlsTimeout = setTimeout(hideControls, 3000);
 }
 
-playerContainer.addEventListener('mousemove', resetControlsTimer);
-
-// --- SPINNER ---
 function showSpinner(show) {
     if (show) {
         playerLoadingSpinner.classList.remove('hidden');
@@ -585,6 +644,3 @@ function showSpinner(show) {
         playerLoadingSpinner.classList.add('hidden');
     }
 }
-
-// --- INIT ON LOAD ---
-checkAuthStatus();
