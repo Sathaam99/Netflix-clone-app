@@ -1,0 +1,40 @@
+name: Deploy to Local Docker
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Build and Deploy Locally
+    runs-on: self-hosted  # Triggers execution on your local machine runner
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: |
+          echo "Building Docker image..."
+          docker build -t netflix-clone-app:latest .
+
+      - name: Deploy Container
+        run: |
+          echo "Stopping and removing old container if active..."
+          docker stop netflix-clone-container || true
+          docker rm netflix-clone-container || true
+          
+          echo "Starting new container with local volume mount..."
+          docker run -d \
+            -p 8082:8080 \
+            -v "/Users/sathaam/Downloads/LOST Series:/videos" \
+            --name netflix-clone-container \
+            netflix-clone-app:latest
+
+      - name: Verify Staging Status
+        run: |
+          echo "Waiting 5 seconds for application startup..."
+          sleep 5
+          echo "Checking application health headers..."
+          curl -I --noproxy '*' http://localhost:8082/
