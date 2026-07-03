@@ -25,10 +25,10 @@ graph TD
         end
         
         subgraph DockerEngine ["Docker Engine Daemon"]
-            container[Netflix Clone Container (Port 8082)]
+            container["Netflix Clone Container (Port 8082)"]
         end
         
-        mediaDir[LOST Series Folder<br/>/Users/sathaam/Downloads/LOST Series]
+        mediaDir["LOST Series Folder<br/>/Users/sathaam/Downloads/LOST Series"]
     end
 
     %% Webhook connection
@@ -41,8 +41,8 @@ graph TD
     %% Inner Web App Flow and Usecase
     subgraph ContainerDetail ["Netflix Clone Web Application Container"]
         subgraph Front ["Client Web Browser Client (Port 8082)"]
-            login[1. Sign In sathaam/1234] --> home[2. Browse Seasons & Episodes]
-            home --> play[3. Watch Episode]
+            login["1. Sign In sathaam/1234"] --> home["2. Browse Seasons & Episodes"]
+            home --> play["3. Watch Episode"]
         end
         
         subgraph Back ["Node.js Express Server (Port 8080)"]
@@ -54,8 +54,8 @@ graph TD
         end
         
         subgraph TranscodingProcess ["On-the-Fly Transcoding Engine"]
-            ffmpegVideo[ffmpeg Video Transcoder<br/>HEVC/MKV to H.264/MP4]
-            ffmpegSubs[ffmpeg Subtitle Converter<br/>Internal SRT to WebVTT]
+            ffmpegVideo["ffmpeg Video Transcoder<br/>HEVC/MKV to H.264/MP4"]
+            ffmpegSubs["ffmpeg Subtitle Converter<br/>Internal SRT to WebVTT"]
         end
         
         %% Browser interactions
