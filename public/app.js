@@ -432,6 +432,19 @@ function configureVideoSrc(startSecs) {
     }
 
     video.src = url;
+
+    // Dynamically update subtitle tracks (synchronized to start seek time)
+    const existingTracks = video.querySelectorAll('track');
+    existingTracks.forEach(track => track.remove());
+
+    const track = document.createElement('track');
+    track.kind = 'subtitles';
+    track.label = 'English (Embedded)';
+    track.srclang = 'en';
+    track.src = `/api/subtitles/${currentSeason}/${currentEpisode}?start=${startSecs}`;
+    track.default = true;
+    video.appendChild(track);
+
     video.load();
     
     video.play().then(() => {

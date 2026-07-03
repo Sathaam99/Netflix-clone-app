@@ -339,6 +339,62 @@ app.get('/api/stream/transcode/:season/:episode', authMiddleware, (req, res) => 
     });
 });
 
+// API: Subtitles extractor (on-the-fly WebVTT extraction)
+app.get('/api/subtitles/:season/:episode', authMiddleware, (req, res) => {
+    const season = parseInt(req.params.season, 10);
+    const episode = parseInt(req.params.episode, 10);
+
+    if (!catalog[season] || !catalog[season][episode]) {
+        return res.status(404).send('Episode not found');
+    }
+
+    const videoPath = catalog[season][episode].filePath;
+    if (!fs.existsSync(videoPath)) {
+        return res.status(404).send('Video file does not exist');
+    }
+
+    const start = req.query.start ? parseFloat(req.query.start) : 0;
+
+    res.writeHead(200, {
+        'Content-Type': 'text/vtt',
+        'Access-Control-Allow-Origin': '*'
+    });
+
+    const ffmpegArgs = [];
+
+    // Fast seek before input for subtitle stream sync
+    if (start > 0) {
+        ffmpegArgs.push('-ss', start.toString());
+    }
+
+    ffmpegArgs.push(
+        '-i', videoPath,
+        '-map', '0:s:0',
+        '-f', 'webvtt',
+        'pipe:1'
+    );
+
+    console.log(`Starting subtitle extraction for LOST Season ${season} Episode ${episode} (Seeking to: ${start}s)`);
+    const ffmpegProcess = spawn('ffmpeg', ffmpegArgs);
+
+    ffmpegProcess.stdout.pipe(res);
+
+    ffmpegProcess.stderr.on('data', (data) => {
+        const message = data.toString();
+        if (message.includes('Error') || message.includes('Fatal')) {
+            console.error(`ffmpeg subtitle error: ${message.trim()}`);
+        }
+    });
+
+    req.on('close', () => {
+        ffmpegProcess.kill('SIGKILL');
+    });
+
+    ffmpegProcess.on('error', (err) => {
+        console.error('Failed to start subtitle ffmpeg process:', err);
+    });
+});
+
 // Fallback all non-API routes to index.html
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
