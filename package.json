@@ -1,0 +1,16 @@
+{
+  "name": "netflix-clone-lost",
+  "version": "1.0.0",
+  "description": "Netflix-like web application to stream LOST series from local files",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.2"
+  },
+  "author": "Antigravity",
+  "license": "ISC"
+}
